@@ -8,9 +8,10 @@ import java.util.List;
 
 public class GameDAO {
 
-    public void registerNewGame(Game game) throws SQLException{
-        String sql = "INSERT INTO Game (title, genre, platform, realeseYear, status, rating) VALUES (?, ?, ?, ?, ?, ?)";
-        try (Connection c = DBConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)){
+    public void registerNewGame(Game game) throws SQLException {
+        String sql = "INSERT INTO game (title, genre, platform, realeseYear, status, rating) VALUES (?, ?, ?, ?, ?, ?)";
+        try (Connection c = DBConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             ps.setString(1, game.getTitle());
             ps.setString(2, game.getGenre());
@@ -23,8 +24,6 @@ public class GameDAO {
             try (ResultSet rs = ps.getGeneratedKeys()) {
                 if (rs.next()) game.setId(rs.getInt(1));
             }
-        } catch (SQLException e) {
-            throw new IllegalArgumentException("Não foi possível cadastrar o jogo.");
         }
     }
 
@@ -34,15 +33,14 @@ public class GameDAO {
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next())
-                    return map(rs);
+                if (rs.next()) return map(rs);
             }
         }
         return null;
     }
 
     public List<Game> searchByTitle(String title) throws SQLException {
-        String sql = "SELECT id, title, genre, platform, realeseYear, status, rating FROM game WHERE title = ?";
+        String sql = "SELECT id, title, genre, platform, realeseYear, status, rating FROM game WHERE title LIKE ?";
         List<Game> list = new ArrayList<>();
         try (Connection c = DBConnection.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
@@ -54,66 +52,40 @@ public class GameDAO {
         return list;
     }
 
-    public boolean validateExist (String title, String platform) throws SQLException {
-        String sql = "SELECT title, platform FROM game WHERE title = ? AND platform = ?";
+    public boolean validateExist(String title, String platform) throws SQLException {
+        String sql = "SELECT 1 FROM game WHERE title = ? AND platform = ? LIMIT 1";
         try (Connection c = DBConnection.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, title);
             ps.setString(2, platform);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next())
-                    return true;
+                return rs.next();
             }
         }
-        return false;
     }
 
     public List<Game> listByTitle() throws SQLException {
-        String sql = "SELECT id, title, genre, platform, realeseYear, status, rating FROM game ORDER BY title";
-        List<Game> list = new ArrayList<>();
-        try (Connection c = DBConnection.getConnection();
-             PreparedStatement ps = c.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) list.add(map(rs));
-        }
-        return list;
+        return listGeneric("ORDER BY title");
     }
 
     public List<Game> listById() throws SQLException {
-        String sql = "SELECT id, title, genre, platform, realeseYear, status, rating FROM game ORDER BY id";
-        List<Game> list = new ArrayList<>();
-        try (Connection c = DBConnection.getConnection();
-             PreparedStatement ps = c.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) list.add(map(rs));
-        }
-        return list;
+        return listGeneric("ORDER BY id");
     }
 
     public List<Game> listByGenre() throws SQLException {
-        String sql = "SELECT id, title, genre, platform, realeseYear, status, rating FROM game ORDER BY genre";
-        List<Game> list = new ArrayList<>();
-        try (Connection c = DBConnection.getConnection();
-             PreparedStatement ps = c.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) list.add(map(rs));
-        }
-        return list;
+        return listGeneric("ORDER BY genre");
     }
 
     public List<Game> listByPlatform() throws SQLException {
-        String sql = "SELECT id, title, genre, platform, realeseYear, status, rating FROM game ORDER BY platform";
-        List<Game> list = new ArrayList<>();
-        try (Connection c = DBConnection.getConnection();
-             PreparedStatement ps = c.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) list.add(map(rs));
-        }
-        return list;
+        return listGeneric("ORDER BY platform");
     }
 
     public List<Game> listByStatus() throws SQLException {
-        String sql = "SELECT id, title, genre, platform, realeseYear, status, rating FROM game ORDER BY status";
+        return listGeneric("ORDER BY status");
+    }
+
+    private List<Game> listGeneric(String order) throws SQLException {
+        String sql = "SELECT id, title, genre, platform, realeseYear, status, rating FROM game " + order;
         List<Game> list = new ArrayList<>();
         try (Connection c = DBConnection.getConnection();
              PreparedStatement ps = c.prepareStatement(sql);
@@ -132,7 +104,8 @@ public class GameDAO {
             ps.setString(3, game.getPlatform());
             ps.setInt(4, game.getRealeseYear());
             ps.setString(5, game.getStatus());
-            ps.setInt(6, game.getId());
+            ps.setInt(6, game.getRating());
+            ps.setInt(7, game.getId());
             ps.executeUpdate();
         }
     }
@@ -151,11 +124,10 @@ public class GameDAO {
                 rs.getInt("id"),
                 rs.getString("title"),
                 rs.getString("genre"),
-                rs.getString("platfrom"),
+                rs.getString("platform"),
                 rs.getInt("realeseYear"),
                 rs.getString("status"),
                 rs.getInt("rating")
         );
     }
-
 }
