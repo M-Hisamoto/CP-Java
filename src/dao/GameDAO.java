@@ -41,6 +41,19 @@ public class GameDAO {
         return null;
     }
 
+    public List<Game> searchByTitle(String title) throws SQLException {
+        String sql = "SELECT id, title, genre, platform, realeseYear, status, rating FROM game WHERE title = ?";
+        List<Game> list = new ArrayList<>();
+        try (Connection c = DBConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, "%" + title + "%");
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) list.add(map(rs));
+            }
+        }
+        return list;
+    }
+
     public boolean validateExist (String title, String platform) throws SQLException {
         String sql = "SELECT title, platform FROM game WHERE title = ? AND platform = ?";
         try (Connection c = DBConnection.getConnection();

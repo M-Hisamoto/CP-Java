@@ -2,12 +2,15 @@ package view;
 
 import controller.GameController;
 import dao.GameDAO;
+import db.DBInitializer;
 import model.Game;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
+import java.sql.SQLException;
+import java.util.List;
 
 public class GameView extends JFrame {
 
@@ -73,16 +76,14 @@ public class GameView extends JFrame {
 
         JPanel buttons = new JPanel();
         JButton registerBtt = new JButton("Registrar");
-        JButton readBtt = new JButton("listar");
         JButton updateBtt = new JButton("Atualizar");
         JButton deleteBtt = new JButton("Excluir");
         JButton clearBtt = new JButton("Limpar campos");
 
-        buttons.add(clearBtt);
         buttons.add(registerBtt);
-        buttons.add(readBtt);
         buttons.add(updateBtt);
         buttons.add(deleteBtt);
+        buttons.add(clearBtt);
 
         JPanel search = new JPanel();
         JButton searchBtt = new JButton("Buscar");
@@ -95,8 +96,11 @@ public class GameView extends JFrame {
         add(buttons, BorderLayout.SOUTH);
         add(search, BorderLayout.NORTH);
 
+        registerBtt.addActionListener(e -> save());
+        updateBtt.addActionListener(e -> update());
+        deleteBtt.addActionListener(e -> delete());
         clearBtt.addActionListener(e -> clearFields());
-        registerBtt.addActionListener(e -> clearFields());
+        searchBtt.addActionListener(e -> search());
 
     }
 
@@ -106,6 +110,113 @@ public class GameView extends JFrame {
         genreFd.setText("");
         platformCb.setSelectedIndex(0);
         statusFd.setText("");
+    }
+
+    private Game buildFromForm() throws SQLException {
+        String title = titleFd.getText();
+        String genre = genreFd.getText();
+        String platform = (String) platformCb.getSelectedItem();
+        int realeseYear = Integer.parseInt(realeseYearFd.getText());
+        String status = statusFd.getText();
+        int rating = Integer.parseInt(ratingFd.getText());
+        Game g = new Game(title, genre, platform, realeseYear, status, rating);
+        // Regras de negócio
+        controller.validateGame(g);
+        return g;
+    }
+
+    private void save() {
+        try {
+            Game g = buildFromForm();
+            dao.registerNewGame(g);
+            JOptionPane.showMessageDialog(this,
+                    "Novo jogo registrado com sucesso");
+            loadTable();
+            clearFields();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Erro ao salvar: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void update() {
+        try {
+            if (idFd.getText().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Selecione um registro da tabela.");
+                return;
+            }
+            Game g = buildFromForm();
+            g.setId(Integer.parseInt(idFd.getText()));
+            dao.updateGame(g);
+            loadTable();
+            clearFields();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Erro ao atualizar: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void delete() {
+        try {
+            if (idFd.getText().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Selecione um registro da tabela.");
+                return;
+            }
+            int id = Integer.parseInt(idFd.getText());
+            dao.deleteGame(id);
+            loadTable();
+            clearFields();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Erro ao excluir: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void search() {
+        try {
+            List<Game> list = dao.searchByTitle(searchFd.getText());
+            insertTable(list);
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Erro ao buscar: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void loadTable() {
+        try {
+            DBInitializer.ensureCreated();
+            List<Game> list = dao.listById();
+            insertTable(list);
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Erro ao carregar tabela: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void insertTable(List<Game> list) {
+        model.setRowCount(0);
+        for (Game g : list) {
+            model.addRow(new Object[]{ g.getId(), g.getTitle(), g.getGenre(), g.getPlatform(), g.getRealeseYear(), g.getStatus(), g.getRating() });
+        }
+        // clique para editar
+        table.getSelectionModel().addListSelectionListener(e -> {
+            int i = table.getSelectedRow();
+            if (i >= 0) {
+                idFd.setText(model.getValueAt(i, 0).toString());
+                titleFd.setText(model.getValueAt(i, 1).toString());
+                genreFd.setText(model.getValueAt(i, 2).toString());
+                platformCb.setSelectedItem(model.getValueAt(i, 3).toString());
+                realeseYearFd.setText(model.getValueAt(i, 3).toString());
+                statusFd.setText(model.getValueAt(i, 4).toString());
+                ratingFd.setText(model.getValueAt(i, 5).toString());
+            }
+        });
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            try {
+                DBInitializer.ensureCreated();
+            } catch (SQLException e) {
+                JOptionPane.showMessageDialog(null, "Falha ao inicializar banco: " + e.getMessage());
+            }
+            new GameView().setVisible(true);
+        });
     }
 
 }

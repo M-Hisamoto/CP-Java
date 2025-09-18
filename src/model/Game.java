@@ -19,6 +19,15 @@ public class Game {
         this.rating = rating;
     }
 
+    public Game(String title, String genre, String platform, int realeseYear, String status, int rating) {
+        this.title = title;
+        this.genre = genre;
+        this.platform = platform;
+        this.realeseYear = realeseYear;
+        this.status = status;
+        this.rating = rating;
+    }
+
     public Game() {}
 
     public Integer getId() {
